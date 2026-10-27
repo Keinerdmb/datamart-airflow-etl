@@ -24,7 +24,7 @@ timeout /t 20 /nobreak > nul
 echo ==========================================================
 echo RESULTADOS DE LAS 7 CONSULTAS DE NEGOCIO (POSTGRESQL DW)
 echo ==========================================================
-docker exec -i datamart-postgres-dw psql -U dw_admin -d datamart_dw -c "SELECT TO_CHAR(fecha_transaccion, 'YYYY-MM') AS mes, SUM(revenue_neto) AS revenue_neto, COUNT(DISTINCT nro_transaccion) AS ordenes FROM fact_ventas GROUP BY TO_CHAR(fecha_transaccion, 'YYYY-MM') ORDER BY mes;"
+type sql\queries_negocio.sql | docker exec -i datamart-postgres-dw psql -U dw_admin -d datamart_dw
 
 echo.
 echo Demostracion completada con exito.

@@ -16,6 +16,12 @@ airflow_logs/
 data/processed/*
 !data/processed/.gitkeep
 
+# Enunciados, capturas e imágenes
+*.pdf
+*.png
+*.jpg
+*.jpeg
+
 # Archivos del sistema operativo
 .DS_Store
 Thumbs.db
