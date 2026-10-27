@@ -1,0 +1,21 @@
+# Variables de entorno secretas
+.env
+
+# Archivos de Python y cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.pytest_cache/
+
+# Logs de Airflow y del sistema
+logs/
+airflow_logs/
+*.log
+
+# Archivos temporales de datos procesados
+data/processed/*
+!data/processed/.gitkeep
+
+# Archivos del sistema operativo
+.DS_Store
+Thumbs.db
