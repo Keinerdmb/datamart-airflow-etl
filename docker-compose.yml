@@ -121,9 +121,8 @@ services:
 
   # 6. API REST de productos (catálogo legado)
   products-api:
-    image: apache/airflow:2.8.1
+    image: datamart-products-api:latest
     container_name: datamart-products-api
-    command: bash -c "pip install --no-cache-dir fastapi uvicorn && uvicorn main:app --host 0.0.0.0 --port 8000 --app-dir /app"
     ports:
       - "8000:8000"
     volumes:
