@@ -1,45 +1,42 @@
-# Technical Decisions Document - DataMart S.A.S.
+# Project Decisions - DataMart S.A.S.
 
-Architectural, modeling, and data-cleansing decisions implemented in the pipeline.
-
----
-
-## 1. Analytical Repository Design (Data Warehouse)
-
-A simplified **Star Schema** with 5 tables was implemented:
-
-- **`dim_producto`:** Product catalog storing normalized uppercase product codes, canonical product names, and assigned business categories.
-- **`dim_cliente`:** Customer dimension tracking registered users and grouping anonymous/guest transactions under the synthetic identifier `'GUEST'` (`es_registrado = FALSE`).
-- **`fact_ventas`:** Fact table for valid sales records where quantity and unit price are strictly greater than zero. Contains both `revenue_bruto` and `revenue_neto`.
-- **`fact_devoluciones`:** Fact table for adjustments and returns (records with quantity $\le 0$). Stores adjusted revenue and positive return quantities for clear aggregation.
-- **`log_rechazos`:** Data quality audit table storing discarded records (e.g., unit price $\le 0$ or corrupted rows), including the exact rejection reason and source identifier.
-
-*Rationale:* Separating sales facts from return facts prevents distorted transaction volume metrics and enables straightforward net revenue calculation without ambiguous boolean flags.
+Clear, non-technical explanations of the decisions made while building this data solution.
 
 ---
 
-## 2. Ambiguity Resolution & Business Rules
+## 1. Database Structure
 
-### Transactions without Customer ID
-- **Decision:** Included under the customer key `'GUEST'` with flag `es_registrado = FALSE`.
-- **Rationale:** In e-commerce, guest checkouts represent actual cash receipts. Excluding them would cause monthly financial consolidation reports to understate gross and net revenue relative to bank balances.
+We chose a simple 5-table layout to keep things clean and easy to query:
 
-### Inconsistent Product Descriptions for a Single Code
-- **Decision:** The canonical name in `dim_producto` is calculated using the statistical mode (most frequent uppercase description).
-- **Auditability:** The original description string is preserved in the fact tables (`descripcion_original`) to maintain audit trails and allow direct SQL analysis of naming inconsistencies.
-
-### Duplicates and Overlapping Date Ranges between Sources
-- **Decision:** Deduplication uses a composite key: `(nro_transaccion, codigo_producto, fecha_transaccion)`. When an identical transaction exists in both files, priority is given to the daily stream (`VENTAS_DIARIAS`) as it originates from the latest operational dump.
-
-### UTC Timestamp Standardization
-- **Decision:** All transaction timestamps are normalized to UTC via `pd.to_datetime(..., format="mixed", utc=True)`.
-- **Rationale:** DataMart operates across Colombia, Mexico, and Peru (different local timezones). UTC standardization prevents cross-regional timezone mismatch during financial consolidation.
+- **Products (`dim_producto`):** One row per product code with its cleaned name and category.
+- **Customers (`dim_cliente`):** List of customers, noting whether they have an account or shopped as a guest.
+- **Sales (`fact_ventas`):** Only real, positive sales ($quantity > 0$ and $price > 0$).
+- **Returns (`fact_devoluciones`):** Separated from sales so returns don't hide or confuse real sales numbers.
+- **Rejected Records (`log_rechazos`):** Broken rows (like $price \le 0$) saved with the reason why they were excluded, so nothing is lost silently.
 
 ---
 
-## 3. Pipeline Idempotency Guarantee
+## 2. Practical Solutions to Data Issues
 
-To ensure executing the DAG multiple times on the same date produces the exact same state without duplicate records:
+### Orders without a Customer ID
+- **What we did:** Assigned them to a special customer named `'GUEST'`.
+- **Why:** In online stores, people often buy without logging in. If we threw these away, our revenue totals wouldn't match bank accounts.
 
-1. **Dimensions:** Loaded using `ON CONFLICT DO UPDATE` (upsert), ensuring product and customer records are safely refreshed without duplicate primary keys.
-2. **Fact Tables:** Existing batch records are cleaned before loading (`TRUNCATE TABLE fact_ventas, fact_devoluciones, log_rechazos CASCADE`), guaranteeing an atomic, consistent reload with zero duplicate rows.
+### Products with Different Names for the Same Code
+- **What we did:** Picked the most common name (the mode) for the master catalog.
+- **Why:** Keeps the catalog tidy while keeping the original description in the sales table for auditing.
+
+### Duplicate Rows Across Files
+- **What we did:** Checked uniqueness using `Transaction Number + Product Code + Date`. If a row appeared in both files, we kept the one from daily sales because it's newer.
+
+### Timezones
+- **What we did:** Converted all dates to universal time (UTC).
+- **Why:** Since sales happen across different countries, using one standard time keeps reports accurate.
+
+---
+
+## 3. Safe Re-Runs (Idempotency)
+
+Running the pipeline twice on the same day will **not duplicate rows**:
+- Product and customer tables update existing records instead of inserting duplicates.
+- The pipeline clears the previous batch before loading the new one so totals stay 100% correct.
