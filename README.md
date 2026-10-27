@@ -70,9 +70,10 @@ erDiagram
 
 ## ⚡ How to Run (< 1 Minute)
 
-### Easiest Way (Automated Script)
-- **Windows:** Double-click or run `demo.bat` in your terminal.
-- **Linux/macOS:** Run `bash demo.sh` in your terminal.
+### Easiest Way (Automated Demo)
+- **Option 1 (Cross-platform Python):** Double-click `run_demo.py` or run `python run_demo.py`.
+- **Option 2 (Windows Script):** Double-click `demo.bat` or run `.\demo.bat`.
+- **Option 3 (Linux/macOS):** Run `bash demo.sh`.
 
 *The script starts Docker, runs the pipeline, and prints the answers to all business questions directly in the console (~20-25 seconds).*
 
