@@ -22,7 +22,7 @@ x-airflow-common: &airflow-common
     _PIP_ADDITIONAL_REQUIREMENTS: pandas psycopg2-binary sqlalchemy
   volumes:
     - ./dags:/opt/airflow/dags
-    - ./scripts:/opt/airflow/scripts
+    - ./include:/opt/airflow/include
     - ./data:/opt/airflow/data
   user: "${AIRFLOW_UID:-50000}:0"
 

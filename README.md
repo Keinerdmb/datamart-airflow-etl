@@ -151,8 +151,11 @@ Direct answers to business questions backed by real numbers from the loaded Data
 │   └── Dockerfile            # Container image build instructions
 ├── dags/
 │   └── datamart_etl_dag.py   # Airflow DAG definition with explicit task dependencies
-├── scripts/
-│   └── etl_process.py        # Core ETL logic (extraction, cleaning, business rules, loading)
+├── include/
+│   ├── __init__.py           # Package marker for modular Airflow utilities
+│   ├── extract.py            # Extraction and column normalization module
+│   ├── transform.py          # Data cleaning, business rules, and API enrichment module
+│   └── load.py               # Idempotent database loading module
 ├── sql/
 │   ├── init_dw.sql           # Data Warehouse DDL schema definition
 │   └── queries_negocio.sql   # SQL analytical queries answering business questions

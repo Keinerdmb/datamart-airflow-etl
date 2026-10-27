@@ -26,28 +26,28 @@ default_args = {
 
 def _extraer_diario(**context):
     """Extrae las transacciones de ventas diarias y guarda en processed."""
-    from scripts.etl_process import extraer_fuente_diaria
+    from include.extract import extraer_fuente_diaria
     df = extraer_fuente_diaria(ruta_base=RAW_DATA_PATH, limite_filas=25000)
     print(f"Extracción diaria: {len(df)} filas leídas.")
 
 
 def _extraer_historico(**context):
     """Extrae el historial de transacciones extendido y guarda en processed."""
-    from scripts.etl_process import extraer_fuente_historica
+    from include.extract import extraer_fuente_historica
     df = extraer_fuente_historica(ruta_base=RAW_DATA_PATH, limite_filas=25000)
     print(f"Extracción histórica: {len(df)} filas leídas.")
 
 
 def _transformar(**context):
     """Aplica la limpieza y las reglas de negocio sobre las extracciones."""
-    from scripts.etl_process import transformar_datos
+    from include.transform import transformar_datos
     transformar_datos()
     print("Transformación completada.")
 
 
 def _cargar_dw(**context):
     """Carga los datos limpios en PostgreSQL de manera idempotente."""
-    from scripts.etl_process import cargar_a_postgres
+    from include.load import cargar_a_postgres
     
     # Toma la conexión registrada en Airflow (postgres_dw)
     try:
