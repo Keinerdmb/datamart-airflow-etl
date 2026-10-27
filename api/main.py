@@ -3,10 +3,14 @@ API REST de Productos - DataMart S.A.S. (Servicio Legado)
 Expone el catálogo de productos para enriquecer el pipeline ETL.
 """
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Path, Query
 from typing import Optional, List, Dict
 
-app = FastAPI(title="DataMart Products API", version="1.0.0")
+app = FastAPI(
+    title="DataMart Products API",
+    version="1.0.0",
+    description="API REST del catalogo legado. Puedes probar consultando codigos de ejemplo como: 23843, 22197, 23084, 85123A."
+)
 
 # Catálogo base del sistema legado de DataMart
 CATALOGO_PRODUCTOS = [
@@ -47,9 +51,24 @@ def listar_productos(page: int = Query(1, ge=1), limit: int = Query(10, ge=1, le
     }
 
 
-@app.get("/products/{codigo}")
-def obtener_producto(codigo: str):
-    """Consulta los datos de un producto específico por su código."""
+@app.get("/products/{codigo}", summary="Obtener producto por codigo")
+def obtener_producto(
+    codigo: str = Path(
+        ...,
+        description="Codigo unico del producto. Ejemplos validos: 23843, 22197, 23084, 22423, 85123A",
+        example="23843"
+    )
+):
+    """
+    Consulta los datos de un producto especifico por su codigo.
+    
+    Codigos de prueba disponibles:
+    - `23843` (PAPER CRAFT LITTLE BIRDIE - Papeleria)
+    - `22197` (SMALL POPCORN HOLDER - Hogar)
+    - `23084` (RABBIT NIGHT LIGHT - Hogar)
+    - `85123A` (WHITE HANGING HEART T-LIGHT HOLDER - Hogar)
+    - `22313` (OFFICE MUG WARMER PINK - Electronica)
+    """
     codigo_limpio = codigo.strip().upper()
     producto = INDICE_PRODUCTOS.get(codigo_limpio)
     
