@@ -130,3 +130,12 @@ Key findings obtained from the data warehouse:
 ├── data/raw/                 # Input CSV datasets
 └── docs/                     # Design decisions and documentation
 ```
+
+---
+
+## 👤 Author & Credits
+
+- **Author:** Keiner Martinez
+- **GitHub:** [@Keinerdmb](https://github.com/Keinerdmb)
+- **Project:** DataMart S.A.S. - Data Engineering Performance Evaluation
+
