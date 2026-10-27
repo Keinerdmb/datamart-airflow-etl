@@ -10,6 +10,11 @@ import sys
 import time
 
 def main():
+    # Asegura que el script siempre se ejecute en la carpeta del proyecto
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    if script_dir:
+        os.chdir(script_dir)
+
     print("=" * 60)
     print(" DEMOSTRACION AUTOMATICA - DATAMART S.A.S.")
     print("=" * 60)
