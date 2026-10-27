@@ -1,6 +1,6 @@
-# Modelo de Datos - DataMart S.A.S.
+# Data Warehouse Model - DataMart S.A.S.
 
-## Diagrama Entidad-Relación (Esquema Estrella)
+## Entity-Relationship Diagram (Star Schema)
 
 ```mermaid
 erDiagram
@@ -67,3 +67,13 @@ erDiagram
         timestamp fecha_rechazo
     }
 ```
+
+---
+
+## Tables Description
+
+1. **`dim_producto`:** Master table for products. Stores unique uppercase product codes, canonical product names, and assigned categories.
+2. **`dim_cliente`:** Master table for customers. Identifies registered accounts versus guest orders (`GUEST`).
+3. **`fact_ventas`:** Valid orders (positive quantity and unit price). Stores gross revenue and net revenue (adjusted for daily returns).
+4. **`fact_devoluciones`:** Returns and adjustment records (negative or zero quantities). Stores the return value and units in absolute numbers.
+5. **`log_rechazos`:** Operational reject log. Captures records with invalid unit prices ($\le 0$) or corrupted data alongside the rejection cause.

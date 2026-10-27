@@ -1,45 +1,45 @@
-# Documento de Decisiones Técnicas - DataMart S.A.S.
+# Technical Decisions Document - DataMart S.A.S.
 
-Breve justificación de las decisiones de arquitectura, modelado y limpieza de datos tomadas en la solución.
-
----
-
-## 1. Diseño del Repositorio Analítico (Data Warehouse)
-
-Se adoptó un **esquema estrella** simplificado de 5 tablas:
-
-- **`dim_producto`:** Almacena el catálogo de productos con código normalizado en mayúsculas, nombre canónico oficial y su categoría.
-- **`dim_cliente`:** Registra clientes identificados y clasifica a las compras anónimas con el identificador especial `'GUEST'` (`es_registrado = FALSE`).
-- **`fact_ventas`:** Hechos de ventas válidas con cantidades y precios estrictamente mayores a cero. Contiene tanto `revenue_bruto` como `revenue_neto`.
-- **`fact_devoluciones`:** Hechos de transacciones con cantidades menores o iguales a cero. Registra el monto ajustado y la cantidad devuelta en valor positivo.
-- **`log_rechazos`:** Tabla de auditoría donde se aíslan registros corruptos o ventas con precios menores o iguales a cero, guardando el motivo de rechazo y la fuente de origen.
-
-*Justificación:* Separar hechos de ventas de devoluciones previene distorsiones en los cálculos de volumen transaccional y facilita calcular el revenue neto de forma directa y transparente.
+Architectural, modeling, and data-cleansing decisions implemented in the pipeline.
 
 ---
 
-## 2. Resolución de Casos Ambiguos
+## 1. Analytical Repository Design (Data Warehouse)
 
-### Transacciones sin Customer ID
-- **Decisión:** Se incluyen asignándoles el identificador `'GUEST'` y marcando `es_registrado = FALSE`.
-- **Motivo:** En comercio electrónico, las compras como invitado representan ingresos financieros reales. Descartarlas provocaría que los cierres contables mensuales no cuadren con los ingresos bancarios.
+A simplified **Star Schema** with 5 tables was implemented:
 
-### Descripciones inconsistentes de un mismo producto
-- **Decisión:** Se calcula el nombre canónico oficial en `dim_producto` tomando la moda (el valor más frecuente) en mayúsculas.
-- **Trazabilidad:** Se conserva la columna `descripcion_original` en las tablas de hechos para auditar la variabilidad y permitir responder consultas de inconsistencia léxica.
+- **`dim_producto`:** Product catalog storing normalized uppercase product codes, canonical product names, and assigned business categories.
+- **`dim_cliente`:** Customer dimension tracking registered users and grouping anonymous/guest transactions under the synthetic identifier `'GUEST'` (`es_registrado = FALSE`).
+- **`fact_ventas`:** Fact table for valid sales records where quantity and unit price are strictly greater than zero. Contains both `revenue_bruto` and `revenue_neto`.
+- **`fact_devoluciones`:** Fact table for adjustments and returns (records with quantity $\le 0$). Stores adjusted revenue and positive return quantities for clear aggregation.
+- **`log_rechazos`:** Data quality audit table storing discarded records (e.g., unit price $\le 0$ or corrupted rows), including the exact rejection reason and source identifier.
 
-### Duplicados y solapamiento entre fuentes
-- **Decisión:** Se utiliza la clave compuesta `(nro_transaccion, codigo_producto, fecha_transaccion)`. Si un registro existe en ambas fuentes, se prioriza la fuente de ventas diarias (`VENTAS_DIARIAS`) por ser el volcado operacional más reciente.
-
-### Normalización de Fechas a UTC
-- **Decisión:** Todas las marcas temporales se convierten a UTC usando `pd.to_datetime(..., format="mixed", utc=True)`.
-- **Motivo:** DataMart opera en Colombia, México y Perú (diferentes zonas horarias). La unificación a UTC garantiza cierres mensuales consolidados sin desfases horarios.
+*Rationale:* Separating sales facts from return facts prevents distorted transaction volume metrics and enables straightforward net revenue calculation without ambiguous boolean flags.
 
 ---
 
-## 3. Garantía de Idempotencia del Pipeline
+## 2. Ambiguity Resolution & Business Rules
 
-Para asegurar que ejecutar el DAG varias veces el mismo día produzca exactamente el mismo resultado:
+### Transactions without Customer ID
+- **Decision:** Included under the customer key `'GUEST'` with flag `es_registrado = FALSE`.
+- **Rationale:** In e-commerce, guest checkouts represent actual cash receipts. Excluding them would cause monthly financial consolidation reports to understate gross and net revenue relative to bank balances.
 
-1. **Dimensiones:** Se utiliza la cláusula `ON CONFLICT DO UPDATE` (upsert), actualizando descripciones o categorías sin generar duplicados.
-2. **Hechos:** Antes de insertar los registros del lote, se limpian las tablas de hechos (`TRUNCATE TABLE fact_ventas, fact_devoluciones, log_rechazos CASCADE`), garantizando una recarga atómica y consistente sin duplicidad de datos.
+### Inconsistent Product Descriptions for a Single Code
+- **Decision:** The canonical name in `dim_producto` is calculated using the statistical mode (most frequent uppercase description).
+- **Auditability:** The original description string is preserved in the fact tables (`descripcion_original`) to maintain audit trails and allow direct SQL analysis of naming inconsistencies.
+
+### Duplicates and Overlapping Date Ranges between Sources
+- **Decision:** Deduplication uses a composite key: `(nro_transaccion, codigo_producto, fecha_transaccion)`. When an identical transaction exists in both files, priority is given to the daily stream (`VENTAS_DIARIAS`) as it originates from the latest operational dump.
+
+### UTC Timestamp Standardization
+- **Decision:** All transaction timestamps are normalized to UTC via `pd.to_datetime(..., format="mixed", utc=True)`.
+- **Rationale:** DataMart operates across Colombia, Mexico, and Peru (different local timezones). UTC standardization prevents cross-regional timezone mismatch during financial consolidation.
+
+---
+
+## 3. Pipeline Idempotency Guarantee
+
+To ensure executing the DAG multiple times on the same date produces the exact same state without duplicate records:
+
+1. **Dimensions:** Loaded using `ON CONFLICT DO UPDATE` (upsert), ensuring product and customer records are safely refreshed without duplicate primary keys.
+2. **Fact Tables:** Existing batch records are cleaned before loading (`TRUNCATE TABLE fact_ventas, fact_devoluciones, log_rechazos CASCADE`), guaranteeing an atomic, consistent reload with zero duplicate rows.

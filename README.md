@@ -1,87 +1,87 @@
-# Pipeline ETL con Apache Airflow y Data Warehouse - DataMart S.A.S.
+# ETL Pipeline with Apache Airflow and Data Warehouse - DataMart S.A.S.
 
-Solución integral de ingeniería de datos para la ingesta, limpieza, enriquecimiento y carga analítica de transacciones de comercio electrónico en PostgreSQL orquestada con Apache Airflow y Docker.
-
----
-
-## 🚀 Arquitectura del Sistema
-
-- **Apache Airflow 2.8.1 (LocalExecutor):** Orquesta el flujo diario de extracción, transformación, enriquecimiento, carga y validación.
-- **PostgreSQL Metadatos (puerto 5432):** Base de datos dedicada para el funcionamiento interno de Airflow.
-- **PostgreSQL Data Warehouse (puerto 5433):** Repositorio analítico destino (`datamart_dw`) con esquema estrella inicializado al arrancar (`sql/init_dw.sql`).
-- **FastAPI (puerto 8000):** Microservicio REST que expone el catálogo legado de productos (`/products` y `/products/{codigo}`).
+End-to-end data engineering solution for ingestion, cleansing, enrichment, and analytical loading of e-commerce transactions into PostgreSQL, orchestrated with Apache Airflow and Docker.
 
 ---
 
-## 📁 Estructura del Repositorio
+## 🚀 System Architecture
+
+- **Apache Airflow 2.8.1 (LocalExecutor):** Orchestrates the daily pipeline stages: extraction, transformation, enrichment, idempotent loading, and quality validation.
+- **PostgreSQL Airflow Metadata (Port 5432):** Dedicated internal database for Airflow scheduler and webserver state.
+- **PostgreSQL Analytical Data Warehouse (Port 5433):** Star schema analytical repository (`datamart_dw`) initialized automatically on startup (`sql/init_dw.sql`).
+- **FastAPI Product Catalog API (Port 8000):** Lightweight REST microservice serving the legacy product catalog (`/products` and `/products/{code}`).
+
+---
+
+## 📁 Repository Structure
 
 ```text
-├── .env.example              # Plantilla de variables de entorno
-├── .gitignore                # Exclusiones de Git (seguridad y temporales)
-├── docker-compose.yml        # Orquestación de contenedores
+├── .env.example              # Environment variables template
+├── .gitignore                # Git exclusion rules (credentials and temporary files)
+├── docker-compose.yml        # Multi-container orchestration definition
 ├── api/
-│   ├── main.py               # Microservicio FastAPI (catálogo legado)
-│   └── Dockerfile            # Imagen del microservicio
+│   ├── main.py               # FastAPI microservice (legacy product catalog)
+│   └── Dockerfile            # Container image build instructions
 ├── dags/
-│   └── datamart_etl_dag.py   # DAG de Airflow con dependencias explícitas
+│   └── datamart_etl_dag.py   # Airflow DAG definition with explicit task dependencies
 ├── scripts/
-│   └── etl_process.py        # Extracción, transformación y carga idempotente
+│   └── etl_process.py        # Core ETL logic (extraction, cleaning, business rules, loading)
 ├── sql/
-│   ├── init_dw.sql           # DDL de creación de tablas en el Data Warehouse
-│   └── queries_negocio.sql   # Consultas que responden las 7 preguntas de negocio
+│   ├── init_dw.sql           # Data Warehouse DDL schema definition
+│   └── queries_negocio.sql   # SQL analytical queries answering business questions
 ├── data/
-│   ├── raw/                  # Datos crudos de Kaggle (data.csv y Sales Transaction)
-│   └── processed/            # Almacenamiento intermedio de datos limpios
+│   ├── raw/                  # Raw input datasets (data.csv and Sales Transaction)
+│   └── processed/            # Staging directory for intermediate cleaned datasets
 └── docs/
-    ├── DECISIONES.md         # Justificación de diseño, ambigüedades e idempotencia
-    └── modelo_datos.md       # Diagrama y descripción del modelo entidad-relación
+    ├── DECISIONES.md         # Technical decisions, ambiguity resolution, and idempotency
+    └── modelo_datos.md       # Data model entity-relationship diagram and documentation
 ```
 
 ---
 
-## ⚡ Guía de Inicio Rápido (< 3 Minutos)
+## ⚡ Quick Start Guide (< 3 Minutes)
 
-### 1. Clonar el repositorio
+### 1. Clone the repository
 ```bash
 git clone https://github.com/Keinerdmb/datamart-airflow-etl.git
 cd datamart-airflow-etl
 ```
 
-### 2. Configurar variables de entorno
+### 2. Configure environment variables
 ```bash
 cp .env.example .env
 ```
 
-### 3. Levantar los servicios con Docker Compose
+### 3. Start all services with Docker Compose
 ```bash
 docker compose up -d
 ```
-*Al ejecutar este comando, Airflow, las dos bases de datos PostgreSQL y la API de productos se inician automáticamente.*
+*All services (Airflow Webserver, Scheduler, both PostgreSQL databases, and the FastAPI service) start and configure automatically without manual intervention.*
 
 ---
 
-## 🌐 Accesos y Credenciales
+## 🌐 Endpoints & Credentials
 
-| Servicio | URL | Credenciales | Descripción |
+| Service | Access URL | Credentials | Purpose |
 | :--- | :--- | :--- | :--- |
-| **Airflow Webserver** | [http://localhost:8080](http://localhost:8080) | `admin` / `admin` | Monitoreo y ejecución de DAGs |
-| **Data Warehouse (PostgreSQL)** | `localhost:5433` | User: `dw_admin` / Pass: `dw_secret_pass` / DB: `datamart_dw` | Base analítica |
-| **API de Productos (FastAPI)** | [http://localhost:8000/docs](http://localhost:8000/docs) | Sin autenticación | Swagger / Endpoints catálogo |
+| **Airflow UI** | [http://localhost:8080](http://localhost:8080) | `admin` / `admin` | DAG orchestration and monitoring |
+| **Data Warehouse (PostgreSQL)** | `localhost:5433` | User: `dw_admin` / Pass: `dw_secret_pass` / DB: `datamart_dw` | Analytical database |
+| **Products API (FastAPI)** | [http://localhost:8000/docs](http://localhost:8000/docs) | None (Public) | Interactive Swagger API docs |
 
 ---
 
-## 🔍 Validación del Pipeline y Consultas de Negocio
+## 🔍 Pipeline Verification & Business Analytics
 
-### Ejecutar el pipeline desde Airflow CLI
+### Trigger DAG via Airflow CLI
 ```bash
 docker exec -i datamart-airflow-webserver airflow dags trigger datamart_ecommerce_pipeline
 ```
 
-### Ejecutar las 7 consultas de negocio contra el Data Warehouse
+### Execute the 7 analytical business queries against the Data Warehouse
 ```bash
+# In Linux/macOS bash:
 docker exec -i datamart-postgres-dw psql -U dw_admin -d datamart_dw -f /docker-entrypoint-initdb.d/../sql/queries_negocio.sql
-```
-O en PowerShell:
-```powershell
+
+# In Windows PowerShell:
 Get-Content "sql/queries_negocio.sql" | docker exec -i datamart-postgres-dw psql -U dw_admin -d datamart_dw
 ```
