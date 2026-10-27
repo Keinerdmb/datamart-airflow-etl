@@ -22,6 +22,7 @@ data/processed/*
 *.jpg
 *.jpeg
 
-# Archivos del sistema operativo
+# Archivos del sistema operativo y editor
+.vscode/
 .DS_Store
 Thumbs.db
